@@ -26,7 +26,7 @@ src/
  ├── widgets/          # Header, WeatherDetails, FavoritesList
  ├── features/         # SearchLocation, ManageFavorites, EditNickname
  ├── entities/         # WeatherCard, DistrictData (JSON 처리)
- ├── shared/           # UI(Button, Input), API(fetchWeather), Utils
+ ├── shared/           # UI(Button, Input), API(getCurrentWeather, getWeatherForecast), Utils
  └── main.tsx
 
 ```
@@ -42,7 +42,7 @@ src/
 
 ## 1. 프로젝트 소개
 - 사용자의 현재 위치 및 검색 기반 날씨 정보 제공 서비스
-- **기술 스택**: React, Next.js(혹은 Vite), TypeScript, Tailwind CSS, Tanstack Query
+- **기술 스택**: React,  TypeScript, Tailwind CSS, Tanstack Query
 
 ## 2. 아키텍처: FSD (Feature-Sliced Design)
 본 프로젝트는 확장성과 유지보수성을 위해 FSD 아키텍처를 채택했습니다.
@@ -65,11 +65,14 @@ src/
 - **Tailwind CSS**: 유틸리티 우선 CSS 프레임워크를 통해 생산성을 높이고 반응형 UI를 빠르게 구현했습니다.
 
 ### 4.1 선정되지않은 기술 스택
-- **Next** : 자체적으로 app 폴더를 라우팅용으로 사용하여 이름이 겹쳐서 폴더 구조에 문제를 일으키기 때문에 선정하지 않았습니다.
+- **Next** : 자체적으로 app 폴더를 라우팅용으로 사용하여 이름이 겹쳐서 폴더 구조에 문제를 일으키기 때문에 선정하지 않았습니다. 또한 (API) 중심 앱 특성상 SRR필요성이 낮아 CSR방식은 Vite를 선정하였습니다.
 
 ## 5. API 통신전략
 - **OpenWeatherMap One Call API 3.0** (또는 2.5)를 사용하여 현재 날씨 및 예보 데이터를 통합 관리합니다.
 - API Key는 환경변수로 관리하여 보안을 유지하며, 모든 통신은 TypeScript Interface를 통해 데이터 무결성을 보장합니다.
 
+## 6. 상태 관리 전략
+- **Tanstack Query**: 서버 상태(날씨 데이터)의 비동기 로직을 관리합니다. Geolocation 훅을 통해 획득한 좌표가 있을 때만 API 호출을 수행하도록 선언적으로 설계했습니다.
+- **Data Transformation**: API 응답 원본과 UI에서 사용하는 데이터 모델을 분리하여, 서버 스펙 변경에 유연하게 대응할 수 있도록 구현했습니다.
 ---
 
