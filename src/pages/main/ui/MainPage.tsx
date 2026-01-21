@@ -192,6 +192,12 @@ const MainPage = () => {
   const handleToggleFavorite = useCallback(() => {
     if (!currentWeather) return
 
+    // 즐겨찾기가 가득 찼고, 현재 지역이 즐겨찾기에 없는 경우 안내 메시지
+    if (isFull && !isCurrentFavorite) {
+      alert('즐겨찾기는 최대 6개까지 가능합니다. 새로운 지역을 추가하려면 기존 항목을 삭제해 주세요.')
+      return
+    }
+
     const item: FavoriteItem = {
       id: currentLocationId,
       name: displayLocationName,
@@ -200,7 +206,7 @@ const MainPage = () => {
     }
 
     toggleFavorite(item)
-  }, [currentWeather, currentLocationId, displayLocationName, selectedLocation, toggleFavorite])
+  }, [currentWeather, currentLocationId, displayLocationName, selectedLocation, toggleFavorite, isFull, isCurrentFavorite])
 
   // 즐겨찾기 선택 핸들러
   const handleSelectFavorite = useCallback((item: FavoriteItem) => {

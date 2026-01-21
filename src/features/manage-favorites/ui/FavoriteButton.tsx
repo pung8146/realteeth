@@ -2,44 +2,35 @@ interface FavoriteButtonProps {
   isFavorite: boolean
   isFull: boolean
   onClick: () => void
-  disabled?: boolean
 }
 
 /**
  * 즐겨찾기 추가/해제 버튼 (별 아이콘)
+ * 항상 클릭 가능하며, 가득 찼을 때의 처리는 onClick 핸들러에서 수행
  */
 export const FavoriteButton = ({
   isFavorite,
   isFull,
   onClick,
-  disabled = false,
 }: FavoriteButtonProps) => {
-  // 이미 즐겨찾기거나 가득 차지 않은 경우에만 활성화
-  const isDisabled = disabled || (!isFavorite && isFull)
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!isDisabled) {
-      onClick()
-    }
+    onClick()
   }
 
   return (
     <button
       onClick={handleClick}
-      disabled={isDisabled}
-      className={`p-2 rounded-full transition-all duration-200
+      className={`p-2 rounded-full transition-all duration-200 cursor-pointer
         ${isFavorite
           ? 'text-yellow-400 hover:text-yellow-500'
-          : isDisabled
-            ? 'text-gray-300 cursor-not-allowed'
-            : 'text-gray-400 hover:text-yellow-400'
+          : 'text-gray-400 hover:text-yellow-400'
         }`}
       title={
         isFavorite
           ? '즐겨찾기 해제'
           : isFull
-            ? '즐겨찾기가 가득 찼습니다 (최대 6개)'
+            ? '즐겨찾기 추가 (최대 6개)'
             : '즐겨찾기 추가'
       }
     >
