@@ -11,13 +11,135 @@ import { formatDistrictName } from '@entities/district'
 import { ForecastList, ForecastSkeleton } from '@widgets/weather-forecast'
 import { WeatherCardSkeleton } from '@shared/ui'
 
+/**
+ * 로딩 상태 타입 정의
+ */
+type LoadingStatus = 
+  | 'waiting_permission'   // 위치 권한 요청 대기 중
+  | 'location_denied'      // 위치 권한 거부됨
+  | 'fetching_weather'     // 좌표 확보 후 날씨 데이터 로딩 중
+  | 'searching'            // 검색 중
+  | 'ready'                // 데이터 준비 완료
+  | 'error'                // 에러 발생
+
+interface LoadingStatusInfo {
+  status: LoadingStatus
+  title: string
+  message: string
+  showSkeleton: boolean
+  iconType: 'location' | 'weather' | 'search' | 'denied' | 'error' | 'none'
+}
+
+/**
+ * 현재 로딩 상태 정보를 반환하는 함수
+ */
+const getLoadingStatusInfo = (params: {
+  geoLoading: boolean
+  geoLocation: { lat: number; lon: number } | null
+  geoError: string | null
+  currentWeatherLoading: boolean
+  isSearching: boolean
+  locationSource: 'geolocation' | 'search'
+  hasCurrentWeather: boolean
+  isError: boolean
+}): LoadingStatusInfo => {
+  const {
+    geoLoading,
+    geoLocation,
+    geoError,
+    currentWeatherLoading,
+    isSearching,
+    locationSource,
+    hasCurrentWeather,
+    isError,
+  } = params
+
+  // 1. 검색 중인 경우
+  if (isSearching) {
+    return {
+      status: 'searching',
+      title: '지역 검색 중',
+      message: '선택한 지역의 좌표를 찾고 있습니다...',
+      showSkeleton: true,
+      iconType: 'search',
+    }
+  }
+
+  // 2. 위치 권한 거부된 경우 (geolocation 모드에서만)
+  if (geoError && locationSource === 'geolocation' && !hasCurrentWeather) {
+    return {
+      status: 'location_denied',
+      title: '위치 권한 필요',
+      message: '위치 권한이 거부되었습니다.\n검색창을 이용해 지역을 직접 선택해 주세요.',
+      showSkeleton: false,
+      iconType: 'denied',
+    }
+  }
+
+  // 3. 위치 권한 요청 대기 중 (geolocation 모드에서만)
+  if (geoLoading && !geoLocation && locationSource === 'geolocation') {
+    return {
+      status: 'waiting_permission',
+      title: '위치 권한 요청 중',
+      message: '현재 위치의 날씨를 확인하려면\n위치 권한을 허용해 주세요.',
+      showSkeleton: true,
+      iconType: 'location',
+    }
+  }
+
+  // 4. 좌표 확보 후 날씨 데이터 로딩 중
+  if (geoLocation && currentWeatherLoading && locationSource === 'geolocation') {
+    return {
+      status: 'fetching_weather',
+      title: '내 위치를 찾았습니다',
+      message: '날씨 정보를 가져오는 중입니다...',
+      showSkeleton: true,
+      iconType: 'weather',
+    }
+  }
+
+  // 5. 검색된 위치의 날씨 로딩 중
+  if (currentWeatherLoading && locationSource === 'search') {
+    return {
+      status: 'fetching_weather',
+      title: '선택한 지역',
+      message: '날씨 정보를 가져오는 중입니다...',
+      showSkeleton: true,
+      iconType: 'weather',
+    }
+  }
+
+  // 6. 에러 상태
+  if (isError && !hasCurrentWeather) {
+    return {
+      status: 'error',
+      title: '오류 발생',
+      message: '날씨 정보를 불러오는 데 실패했습니다.',
+      showSkeleton: false,
+      iconType: 'error',
+    }
+  }
+
+  // 7. 데이터 준비 완료
+  return {
+    status: 'ready',
+    title: '',
+    message: '',
+    showSkeleton: false,
+    iconType: 'none',
+  }
+}
+
 const MainPage = () => {
   const {
     currentWeather,
     forecast,
-    isLoading,
     isError,
     geoError,
+    geoLoading,
+    geoLocation,
+    currentWeatherLoading,
+    isSearching,
     searchError,
     currentWeatherError,
     forecastError,
@@ -28,6 +150,18 @@ const MainPage = () => {
     clearSelectedLocation,
     refetchAll,
   } = useWeatherQuery()
+
+  // 로딩 상태 정보 계산
+  const loadingStatus = getLoadingStatusInfo({
+    geoLoading,
+    geoLocation,
+    geoError,
+    currentWeatherLoading,
+    isSearching,
+    locationSource,
+    hasCurrentWeather: !!currentWeather,
+    isError,
+  })
 
   const {
     favorites,
@@ -140,16 +274,178 @@ const MainPage = () => {
           </div>
         )}
 
-        {/* 로딩 상태 - 스켈레톤 UI */}
-        {isLoading && (
+        {/* 로딩 상태별 안내 카드 */}
+        {loadingStatus.status !== 'ready' && loadingStatus.status !== 'error' && (
           <>
-            <WeatherCardSkeleton />
-            <ForecastSkeleton />
+            {/* 위치 권한 거부 상태 */}
+            {loadingStatus.status === 'location_denied' ? (
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
+                      <svg
+                        className="w-6 h-6 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                        />
+                      </svg>
+                    </div>
+                    <div className="text-white">
+                      <h2 className="text-lg font-semibold">{loadingStatus.title}</h2>
+                      <p className="text-white/80 text-sm">위치 서비스를 사용할 수 없습니다</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <p className="text-gray-600 mb-6 text-center whitespace-pre-line">
+                    {loadingStatus.message.split('\n').map((line, i) => (
+                      <span key={i}>
+                        {line.includes('검색창') ? (
+                          <>
+                            <span className="text-blue-600 font-medium">검색창</span>
+                            {line.replace('검색창', '')}
+                          </>
+                        ) : (
+                          line
+                        )}
+                        {i < loadingStatus.message.split('\n').length - 1 && <br />}
+                      </span>
+                    ))}
+                  </p>
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-2 text-blue-500 animate-bounce">
+                      <svg
+                        className="w-5 h-5 rotate-180"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                        />
+                      </svg>
+                      <span className="text-sm font-medium">검색창에서 지역을 검색하세요</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* 기타 로딩 상태 (권한 요청 중, 날씨 로딩 중, 검색 중) */
+              <>
+                <div className="bg-white rounded-2xl shadow-lg p-8 text-center mb-6">
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center
+                    ${loadingStatus.iconType === 'location' ? 'bg-blue-100' : ''}
+                    ${loadingStatus.iconType === 'weather' ? 'bg-green-100' : ''}
+                    ${loadingStatus.iconType === 'search' ? 'bg-purple-100' : ''}
+                  `}>
+                    {/* 위치 아이콘 */}
+                    {loadingStatus.iconType === 'location' && (
+                      <svg
+                        className="w-8 h-8 text-blue-500 animate-pulse"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    )}
+                    {/* 날씨 아이콘 */}
+                    {loadingStatus.iconType === 'weather' && (
+                      <svg
+                        className="w-8 h-8 text-green-500 animate-spin"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style={{ animationDuration: '2s' }}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                        />
+                      </svg>
+                    )}
+                    {/* 검색 아이콘 */}
+                    {loadingStatus.iconType === 'search' && (
+                      <svg
+                        className="w-8 h-8 text-purple-500 animate-pulse"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                    {loadingStatus.title}
+                  </h2>
+                  <p className="text-gray-500 whitespace-pre-line">
+                    {loadingStatus.message.split('\n').map((line, i) => (
+                      <span key={i}>
+                        {line.includes('위치 권한을 허용') ? (
+                          <>
+                            {line.replace('위치 권한을 허용', '')}
+                            <span className="text-blue-600 font-medium">위치 권한을 허용</span>
+                          </>
+                        ) : (
+                          line
+                        )}
+                        {i < loadingStatus.message.split('\n').length - 1 && <br />}
+                      </span>
+                    ))}
+                  </p>
+                  {/* 로딩 인디케이터 */}
+                  {(loadingStatus.status === 'fetching_weather' || loadingStatus.status === 'searching') && (
+                    <div className="mt-4 flex justify-center">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {loadingStatus.showSkeleton && (
+                  <>
+                    <WeatherCardSkeleton />
+                    <ForecastSkeleton />
+                  </>
+                )}
+              </>
+            )}
           </>
         )}
 
-        {/* 에러 상태 */}
-        {isError && !isLoading && (
+        {/* 에러 상태 (위치 권한 거부가 아닌 다른 에러) */}
+        {loadingStatus.status === 'error' && (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
               <svg
@@ -178,7 +474,7 @@ const MainPage = () => {
         )}
 
         {/* 성공 상태: 날씨 정보 표시 */}
-        {!isLoading && !isError && currentWeather && (
+        {loadingStatus.status === 'ready' && currentWeather && (
           <>
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               {/* 위치 정보 */}
