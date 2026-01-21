@@ -32,6 +32,8 @@
       "@shared/*": ["./src/shared/*"]
     }
   },
-"include": ["src", "vite.config.ts"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+"include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }],
+  "exclude": ["node_modules", "dist", "vite.config.ts"]
 }
+
