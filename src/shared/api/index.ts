@@ -4,6 +4,7 @@ export {
   getWeatherForecast,
   processCurrentWeather,
   processForecast,
+  getCoordsByDistrictName,
 } from './weather'
 
 // 2. 타입들 export
@@ -13,5 +14,6 @@ export type {
   ProcessedCurrentWeather,
   HourlyForecast,
   ProcessedForecast,
-  Coord, 
+  Coord,
+  GeocodingResponse,
 } from './types'

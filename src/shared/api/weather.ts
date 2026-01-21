@@ -4,9 +4,13 @@ import type {
   ProcessedCurrentWeather,
   ProcessedForecast,
   HourlyForecast,
+  GeocodingResponse,
+  Coord,
 } from './types'
+import type { District } from '@entities/district'
 
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
+const GEO_URL = 'https://api.openweathermap.org/geo/1.0'
 const API_KEY = import.meta.env.VITE_WEATHER_API_KEY || ''
 
 /**
@@ -97,5 +101,41 @@ export const processForecast = (data: ForecastResponse): ProcessedForecast => {
     cityName: data.city.name,
     country: data.city.country,
     hourlyForecasts,
+  }
+}
+
+/**
+ * 행정구역 이름으로 좌표를 검색합니다.
+ * @param district 행정구역 객체
+ * @returns 좌표 (lat, lon)
+ */
+export const getCoordsByDistrictName = async (
+  district: District
+): Promise<Coord> => {
+  // 검색 쿼리 생성: "시도 시군구 읍면동" 형태
+  const queryParts: string[] = [district.sido]
+  if (district.sigungu) queryParts.push(district.sigungu)
+  if (district.eupmyeondong) queryParts.push(district.eupmyeondong)
+  
+  const query = queryParts.join(' ')
+  const encodedQuery = encodeURIComponent(query)
+  
+  const url = `${GEO_URL}/direct?q=${encodedQuery},KR&limit=1&appid=${API_KEY}`
+
+  const response = await fetch(url)
+
+  if (!response.ok) {
+    throw new Error(`좌표를 가져올 수 없습니다. (${response.status})`)
+  }
+
+  const data: GeocodingResponse[] = await response.json()
+
+  if (data.length === 0) {
+    throw new Error(`"${query}"에 대한 좌표를 찾을 수 없습니다.`)
+  }
+
+  return {
+    lat: data[0].lat,
+    lon: data[0].lon,
   }
 }
