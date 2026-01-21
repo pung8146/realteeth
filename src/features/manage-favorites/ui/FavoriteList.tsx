@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FavoriteItem } from '../model/types'
 import { EditNicknameModal } from './EditNicknameModal'
+import { FavoriteCard } from './FavoriteCard'
 
 interface FavoriteListProps {
   favorites: FavoriteItem[]
@@ -31,6 +32,11 @@ export const FavoriteList = ({
     setEditingItem(item)
   }
 
+  const handleRemoveClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    onRemove(id)
+  }
+
   const handleSaveNickname = (newName: string) => {
     if (editingItem) {
       onUpdateNickname(editingItem.id, newName)
@@ -52,72 +58,16 @@ export const FavoriteList = ({
         </h2>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {favorites.map((item) => {
-            const isActive = item.id === currentLocationId
-
-            return (
-              <div
-                key={item.id}
-                className={`relative group bg-white rounded-xl shadow-sm p-4 cursor-pointer
-                            transition-all duration-200 hover:shadow-md
-                            ${isActive ? 'ring-2 ring-blue-500' : ''}`}
-                onClick={() => onSelect(item)}
-              >
-                {/* 액션 버튼들 */}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  {/* 수정 버튼 */}
-                  <button
-                    onClick={(e) => handleEditClick(e, item)}
-                    className="p-1 rounded-full bg-gray-100 hover:bg-blue-100 
-                               text-gray-400 hover:text-blue-500 transition-colors"
-                    title="별칭 수정"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* 삭제 버튼 */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onRemove(item.id)
-                    }}
-                    className="p-1 rounded-full bg-gray-100 hover:bg-red-100 
-                               text-gray-400 hover:text-red-500 transition-colors"
-                    title="즐겨찾기에서 삭제"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* 지역 이름 */}
-                <p className="text-sm font-medium text-gray-800 truncate pr-12">
-                  {item.name}
-                </p>
-
-                {/* 현재 선택 표시 */}
-                {isActive && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                    <span className="text-xs text-blue-500">현재 보는 중</span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {favorites.map((item) => (
+            <FavoriteCard
+              key={item.id}
+              item={item}
+              isActive={item.id === currentLocationId}
+              onSelect={() => onSelect(item)}
+              onEdit={(e) => handleEditClick(e, item)}
+              onRemove={(e) => handleRemoveClick(e, item.id)}
+            />
+          ))}
         </div>
       </div>
 

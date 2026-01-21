@@ -160,7 +160,7 @@ export const SearchBar = ({
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 
                         rounded-lg shadow-lg">
           <div className="px-4 py-6 text-center text-gray-500">
-            <p>"{debouncedQuery}"에 대한 검색 결과가 없습니다.</p>
+            <p>해당 장소의 정보가 제공되지 않습니다.</p>
           </div>
         </div>
       )}

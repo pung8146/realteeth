@@ -102,5 +102,27 @@ src/
 ### 3) 사용자 경험(UX) 고도화
 - **문제**: API 통신 중 화면이 텅 비어 보이는 현상 발생.
 - **해결**: `animate-pulse`를 활용한 Skeleton UI를 도입하여 사용자가 앱의 상태를 인지할 수 있도록 개선하고, 인지적인 로딩 시간을 단축했습니다.
+
+## 11. 프로젝트 실행 방법
+
+### 1) 환경 변수 설정
+프로젝트 루트 폴더에 `.env` 파일을 생성하고 OpenWeatherMap에서 발급받은 API Key를 입력합니다.
+```env
+VITE_WEATHER_API_KEY=발급받은API키_값
+```
+2) 패키지 설치 및 실행
+
+# 의존성 설치
+npm install
+
+# 로컬 개발 서버 실행
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+
+# 빌드 결과물 미리보기
+npm run preview
+
 ---
 
