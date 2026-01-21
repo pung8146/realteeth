@@ -8,6 +8,8 @@ import {
 } from '@features/manage-favorites'
 import type { FavoriteItem } from '@features/manage-favorites'
 import { formatDistrictName } from '@entities/district'
+import { ForecastList, ForecastSkeleton } from '@widgets/weather-forecast'
+import { WeatherCardSkeleton } from '@shared/ui'
 
 const MainPage = () => {
   const {
@@ -148,12 +150,12 @@ const MainPage = () => {
           </div>
         )}
 
-        {/* 로딩 상태 */}
+        {/* 로딩 상태 - 스켈레톤 UI */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4" />
-            <p className="text-lg text-gray-600">날씨 정보를 불러오는 중입니다...</p>
-          </div>
+          <>
+            <WeatherCardSkeleton />
+            <ForecastSkeleton />
+          </>
         )}
 
         {/* 에러 상태 */}
@@ -266,6 +268,11 @@ const MainPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* 5일 예보 */}
+            {forecast && (
+              <ForecastList forecasts={forecast.hourlyForecasts} />
+            )}
 
             {/* 즐겨찾기 목록 */}
             <FavoriteList
