@@ -1,9 +1,10 @@
 
 ---
+# 배포된 링크 : https://realteeth-silk.vercel.app/
 
 ### 1. FSD(Feature-Sliced Design) 아키텍처란?
 
-쉽게 말해 **"관심사에 따라 계층별로 폴더를 쪼개는 방식"**입니다. 안쪽(Shared)에서 바깥쪽(App)으로 갈수록 더 복잡하고 구체적인 기능을 담습니다.
+ **"관심사에 따라 계층별로 폴더를 쪼개는 방식"**입니다. 안쪽(Shared)에서 바깥쪽(App)으로 갈수록 더 복잡하고 구체적인 기능을 담습니다.
 
 | 계층 (Layer) | 역할 (쉽게 설명) | 이번 과제에서의 예시 |
 | --- | --- | --- |
@@ -18,6 +19,20 @@
 
 ### 2. 이번 과제용 FSD 폴더 구조 
 
+### [아키텍처 구조도]
+
+```mermaid
+graph TD
+    App[App Layer] --> Pages[Pages Layer]
+    Pages --> Widgets[Widgets Layer]
+    Widgets --> Features[Features Layer]
+    Features --> Entities[Entities Layer]
+    Entities --> Shared[Shared Layer]
+    
+    style App fill:#f9f,stroke:#333,stroke-width:2px
+    style Shared fill:#bbf,stroke:#333,stroke-width:2px
+
+```
 
 ```text
 src/
@@ -95,6 +110,21 @@ src/
 ### 1) 상세 주소 좌표 검색 실패 대응 (Geocoding Fallback)
 - **문제**: OpenWeather Geocoding API가 한국의 모든 읍/면/동 데이터를 완벽히 색인하지 못해 특정 지역 검색 시 결과가 없는 문제 발생.
 - **해결**: 사용자가 선택한 지역의 '읍면동' -> '시군구' -> '시도' 순으로 검색 쿼리를 단계별로 재구성하여 API를 호출하는 Fallback 로직을 구현하여 검색 성공률을 99% 이상으로 개선했습니다.
+
+### [상세 주소 좌표 검색 실패 대응]
+
+OpenWeather Geocoding API의 한국 상세 지역 데이터 부족 문제를 해결하기 위해 단계별 Fallback 로직을 구축했습니다.
+
+```mermaid
+flowchart TD
+    Start([검색 시작]) --> Q1{1순위: 동/구 검색}
+    Q1 -- 성공 --> End([좌표 반환])
+    Q1 -- 실패 --> Q2{2순위: 구 단위 검색}
+    Q2 -- 성공 --> End
+    Q2 -- 실패 --> Q3{3순위: 시/도 단위 검색}
+    Q3 -- 성공 --> End
+    Q3 -- 실패 --> Error[해당 장소의 정보가 제공되지 않습니다.]
+```
 
 ### 2) 대용량 JSON 데이터 처리
 - **문제**: 약 수천 행의 행정구역 데이터를 매번 필터링할 때의 성능 우려.
