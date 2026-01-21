@@ -33,6 +33,7 @@ const MainPage = () => {
     toggleFavorite,
     isFavorite,
     removeFavorite,
+    updateNickname,
   } = useFavorites()
 
   // 데이터 성공 시 콘솔에 출력
@@ -272,6 +273,7 @@ const MainPage = () => {
               currentLocationId={currentLocationId}
               onSelect={handleSelectFavorite}
               onRemove={removeFavorite}
+              onUpdateNickname={updateNickname}
             />
           </>
         )}

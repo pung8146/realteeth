@@ -92,6 +92,21 @@ export const useFavorites = () => {
     return favorites.some((fav) => fav.id === id)
   }, [favorites])
 
+  // 별칭(Nickname) 수정
+  const updateNickname = useCallback((id: string, newNickname: string): boolean => {
+    const index = favorites.findIndex((fav) => fav.id === id)
+    if (index === -1) {
+      return false
+    }
+
+    const newFavorites = favorites.map((fav) =>
+      fav.id === id ? { ...fav, name: newNickname.trim() } : fav
+    )
+    setFavorites(newFavorites)
+    saveFavorites(newFavorites)
+    return true
+  }, [favorites])
+
   // 즐겨찾기가 가득 찼는지 확인
   const isFull = favorites.length >= MAX_FAVORITES
 
@@ -104,6 +119,7 @@ export const useFavorites = () => {
     removeFavorite,
     toggleFavorite,
     isFavorite,
+    updateNickname,
   }
 }
 
