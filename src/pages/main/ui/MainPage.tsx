@@ -1,6 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useWeatherQuery } from '@entities/weather'
 import { SearchBar } from '@features/search-location'
+import {
+  useFavorites,
+  FavoriteButton,
+  FavoriteList,
+} from '@features/manage-favorites'
+import type { FavoriteItem } from '@features/manage-favorites'
 import { formatDistrictName } from '@entities/district'
 
 const MainPage = () => {
@@ -15,10 +21,19 @@ const MainPage = () => {
     forecastError,
     locationSource,
     selectedDistrict,
+    selectedLocation,
     selectDistrict,
     clearSelectedLocation,
     refetchAll,
   } = useWeatherQuery()
+
+  const {
+    favorites,
+    isFull,
+    toggleFavorite,
+    isFavorite,
+    removeFavorite,
+  } = useFavorites()
 
   // 데이터 성공 시 콘솔에 출력
   useEffect(() => {
@@ -35,6 +50,47 @@ const MainPage = () => {
     locationSource === 'search' && selectedDistrict
       ? formatDistrictName(selectedDistrict)
       : currentWeather?.cityName || '위치 확인 중...'
+
+  // 현재 위치의 즐겨찾기 ID (fullPath 또는 cityName 기반)
+  const currentLocationId =
+    locationSource === 'search' && selectedDistrict
+      ? selectedDistrict.fullPath
+      : currentWeather?.cityName || ''
+
+  // 즐겨찾기 여부 확인
+  const isCurrentFavorite = isFavorite(currentLocationId)
+
+  // 즐겨찾기 토글 핸들러
+  const handleToggleFavorite = useCallback(() => {
+    if (!currentWeather) return
+
+    const item: FavoriteItem = {
+      id: currentLocationId,
+      name: displayLocationName,
+      lat: selectedLocation?.lat ?? currentWeather.lat,
+      lon: selectedLocation?.lon ?? currentWeather.lon,
+    }
+
+    toggleFavorite(item)
+  }, [currentWeather, currentLocationId, displayLocationName, selectedLocation, toggleFavorite])
+
+  // 즐겨찾기 선택 핸들러
+  const handleSelectFavorite = useCallback((item: FavoriteItem) => {
+    // 검색된 위치로 설정하기 위해 District 형태로 변환
+    // id가 fullPath 형태면 District로 파싱, 아니면 직접 좌표 사용
+    const parts = item.id.split('-')
+    
+    if (parts.length >= 1 && parts.length <= 3) {
+      // fullPath 형태의 id인 경우
+      selectDistrict({
+        fullPath: item.id,
+        sido: parts[0],
+        sigungu: parts[1] || null,
+        eupmyeondong: parts[2] || null,
+        level: parts.length as 1 | 2 | 3,
+      })
+    }
+  }, [selectDistrict])
 
   // 에러 메시지 결정
   const errorMessage =
@@ -130,75 +186,94 @@ const MainPage = () => {
 
         {/* 성공 상태: 날씨 정보 표시 */}
         {!isLoading && !isError && currentWeather && (
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            {/* 위치 정보 */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6">
-              <div className="flex items-center gap-2 text-blue-100 text-sm mb-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+          <>
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              {/* 위치 정보 */}
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 relative">
+                {/* 즐겨찾기 버튼 */}
+                <div className="absolute top-4 right-4">
+                  <FavoriteButton
+                    isFavorite={isCurrentFavorite}
+                    isFull={isFull}
+                    onClick={handleToggleFavorite}
                   />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                {locationSource === 'search' ? '검색된 위치' : '현재 위치'}
-              </div>
-              <h1 className="text-3xl font-bold">{displayLocationName}</h1>
-            </div>
+                </div>
 
-            {/* 현재 날씨 */}
-            <div className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-6xl font-light text-gray-800">
-                    {currentWeather.temp}°
-                  </p>
-                  <p className="text-gray-500 mt-1">
-                    {currentWeather.description}
-                  </p>
+                <div className="flex items-center gap-2 text-blue-100 text-sm mb-1">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  {locationSource === 'search' ? '검색된 위치' : '현재 위치'}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">
-                    최고 <span className="text-red-500 font-medium">{currentWeather.tempMax}°</span>
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    최저 <span className="text-blue-500 font-medium">{currentWeather.tempMin}°</span>
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    체감 {currentWeather.feelsLike}°
-                  </p>
-                </div>
+                <h1 className="text-3xl font-bold pr-10">{displayLocationName}</h1>
               </div>
 
-              {/* 추가 정보 */}
-              <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-gray-400 text-sm">습도</p>
-                  <p className="text-lg font-medium text-gray-700">
-                    {currentWeather.humidity}%
-                  </p>
+              {/* 현재 날씨 */}
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-6xl font-light text-gray-800">
+                      {currentWeather.temp}°
+                    </p>
+                    <p className="text-gray-500 mt-1">
+                      {currentWeather.description}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">
+                      최고 <span className="text-red-500 font-medium">{currentWeather.tempMax}°</span>
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      최저 <span className="text-blue-500 font-medium">{currentWeather.tempMin}°</span>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      체감 {currentWeather.feelsLike}°
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-gray-400 text-sm">풍속</p>
-                  <p className="text-lg font-medium text-gray-700">
-                    {currentWeather.windSpeed} m/s
-                  </p>
+
+                {/* 추가 정보 */}
+                <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-gray-400 text-sm">습도</p>
+                    <p className="text-lg font-medium text-gray-700">
+                      {currentWeather.humidity}%
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-gray-400 text-sm">풍속</p>
+                    <p className="text-lg font-medium text-gray-700">
+                      {currentWeather.windSpeed} m/s
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+
+            {/* 즐겨찾기 목록 */}
+            <FavoriteList
+              favorites={favorites}
+              currentLocationId={currentLocationId}
+              onSelect={handleSelectFavorite}
+              onRemove={removeFavorite}
+            />
+          </>
         )}
       </main>
     </div>
