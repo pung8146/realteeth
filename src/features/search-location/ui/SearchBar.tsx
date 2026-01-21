@@ -8,6 +8,50 @@ interface SearchBarProps {
   onSelect?: (district: District) => void
 }
 
+/**
+ * 검색어와 일치하는 텍스트 부분을 강조 표시하는 컴포넌트
+ * @param text 전체 텍스트
+ * @param query 검색어
+ */
+const HighlightText = ({ text, query }: { text: string; query: string }) => {
+  // 검색어가 비어있으면 원본 텍스트 반환
+  if (!query.trim()) {
+    return <>{text}</>
+  }
+
+  try {
+    // 정규표현식 특수문자 이스케이프 처리
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // 대소문자 구분 없이 검색어와 일치하는 부분 찾기
+    const regex = new RegExp(`(${escapedQuery})`, 'gi')
+    const parts = text.split(regex)
+
+    // 일치하는 부분이 없으면 원본 텍스트 반환
+    if (parts.length === 1) {
+      return <>{text}</>
+    }
+
+    return (
+      <>
+        {parts.map((part, index) => {
+          // 검색어와 일치하는 부분인지 확인 (대소문자 무시)
+          const isMatch = part.toLowerCase() === query.toLowerCase()
+          return isMatch ? (
+            <span key={index} className="font-bold text-blue-600">
+              {part}
+            </span>
+          ) : (
+            <span key={index}>{part}</span>
+          )
+        })}
+      </>
+    )
+  } catch {
+    // 정규표현식 오류 시 원본 텍스트 반환
+    return <>{text}</>
+  }
+}
+
 export const SearchBar = ({
   placeholder = '시/군/구를 검색하세요',
   onSelect,
@@ -141,7 +185,10 @@ export const SearchBar = ({
                              last:border-b-0"
                 >
                   <span className="text-gray-900">
-                    {formatDistrictName(district)}
+                    <HighlightText 
+                      text={formatDistrictName(district)} 
+                      query={debouncedQuery} 
+                    />
                   </span>
                   <span className="ml-2 text-xs text-gray-400">
                     {district.level === 1 && '시/도'}

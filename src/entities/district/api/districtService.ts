@@ -47,9 +47,21 @@ export const searchDistricts = (
     return { items: [], total: 0 }
   }
 
-  let filtered = rawData.filter((path) =>
-    path.toLowerCase().includes(trimmedQuery)
-  )
+  // 정규화: 모든 구분자(공백, 하이픈)를 제거한 버전으로 비교
+  const normalizedQuery = trimmedQuery.replace(/[\s-]+/g, '')
+
+  let filtered = rawData.filter((path) => {
+    const pathLower = path.toLowerCase()
+    // 원본 데이터도 정규화 (하이픈 제거)
+    const normalizedPath = pathLower.replace(/-/g, '')
+    // 공백으로 변환된 버전
+    const pathWithSpaces = pathLower.replace(/-/g, ' ')
+    
+    // 여러 방식으로 매칭 시도
+    return normalizedPath.includes(normalizedQuery) ||  // 정규화된 비교 (가장 유연)
+           pathLower.includes(trimmedQuery) ||          // 원본 데이터에서 직접 검색
+           pathWithSpaces.includes(trimmedQuery)        // 공백 버전에서 검색
+  })
 
   // 레벨 필터링
   if (level) {
