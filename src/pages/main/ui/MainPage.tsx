@@ -134,6 +134,7 @@ const MainPage = () => {
   const {
     currentWeather,
     forecast,
+    todayMinMax,
     isError,
     geoError,
     geoLoading,
@@ -526,10 +527,10 @@ const MainPage = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-500">
-                      최고 <span className="text-red-500 font-medium">{currentWeather.tempMax}°</span>
+                      최고 <span className="text-red-500 font-medium">{todayMinMax?.max ?? currentWeather.tempMax}°</span>
                     </p>
                     <p className="text-sm text-gray-500">
-                      최저 <span className="text-blue-500 font-medium">{currentWeather.tempMin}°</span>
+                      최저 <span className="text-blue-500 font-medium">{todayMinMax?.min ?? currentWeather.tempMin}°</span>
                     </p>
                     <p className="text-sm text-gray-500 mt-2">
                       체감 {currentWeather.feelsLike}°

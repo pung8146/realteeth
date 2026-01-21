@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getCurrentWeather, processCurrentWeather } from '@shared/api'
+import { getCurrentWeather, getWeatherForecast, processCurrentWeather } from '@shared/api'
 import type { FavoriteItem } from '../model/types'
 
 interface FavoriteCardProps {
@@ -8,6 +8,37 @@ interface FavoriteCardProps {
   onSelect: () => void
   onEdit: (e: React.MouseEvent) => void
   onRemove: (e: React.MouseEvent) => void
+}
+
+/**
+ * 오늘 날짜의 예보에서 최저/최고 기온을 계산합니다.
+ */
+const getTodayMinMax = (forecastList: { dt: number; main: { temp_min: number; temp_max: number } }[]) => {
+  const today = new Date()
+  const todayStr = today.toDateString()
+
+  const todayForecasts = forecastList.filter((item) => {
+    const itemDate = new Date(item.dt * 1000)
+    return itemDate.toDateString() === todayStr
+  })
+
+  if (todayForecasts.length === 0) {
+    // 오늘 데이터가 없으면 첫 8개(24시간) 사용
+    const next24h = forecastList.slice(0, 8)
+    const temps = next24h.map((f) => f.main.temp_min).concat(next24h.map((f) => f.main.temp_max))
+    return {
+      min: Math.round(Math.min(...temps)),
+      max: Math.round(Math.max(...temps)),
+    }
+  }
+
+  const minTemps = todayForecasts.map((f) => f.main.temp_min)
+  const maxTemps = todayForecasts.map((f) => f.main.temp_max)
+
+  return {
+    min: Math.round(Math.min(...minTemps)),
+    max: Math.round(Math.max(...maxTemps)),
+  }
 }
 
 /**
@@ -21,16 +52,30 @@ export const FavoriteCard = ({
   onEdit,
   onRemove,
 }: FavoriteCardProps) => {
-  // 해당 지역의 날씨 정보 가져오기
-  const { data: weather, isLoading, isError } = useQuery({
+  // 해당 지역의 현재 날씨 정보 가져오기
+  const { data: weather, isLoading: isWeatherLoading, isError: isWeatherError } = useQuery({
     queryKey: ['weather', 'favorite', item.lat, item.lon],
     queryFn: async () => {
       const response = await getCurrentWeather(item.lat, item.lon)
       return processCurrentWeather(response)
     },
-    staleTime: 1000 * 60 * 10, // 10분간 fresh 상태 유지
-    gcTime: 1000 * 60 * 30, // 30분간 캐시 유지
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
   })
+
+  // 예보 데이터에서 오늘의 최저/최고 기온 가져오기
+  const { data: todayMinMax, isLoading: isForecastLoading } = useQuery({
+    queryKey: ['weather', 'favorite-forecast', item.lat, item.lon],
+    queryFn: async () => {
+      const response = await getWeatherForecast(item.lat, item.lon)
+      return getTodayMinMax(response.list)
+    },
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  })
+
+  const isLoading = isWeatherLoading || isForecastLoading
+  const isError = isWeatherError
 
   return (
     <div
@@ -86,22 +131,24 @@ export const FavoriteCard = ({
         {isLoading && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-4 bg-gray-200 rounded animate-pulse" />
-            <div className="w-12 h-3 bg-gray-200 rounded animate-pulse" />
+            <div className="w-16 h-3 bg-gray-200 rounded animate-pulse" />
           </div>
         )}
         {isError && (
-          <p className="text-xs text-gray-400">정보 없음</p>
+          <p className="text-xs text-gray-400">해당 장소의 정보가 제공되지 않습니다.</p>
         )}
-        {weather && (
+        {weather && !isLoading && (
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-semibold text-gray-700">
               {weather.temp}°
             </span>
-            <span className="text-xs text-gray-400">
-              <span className="text-red-400">{weather.tempMax}°</span>
-              {' / '}
-              <span className="text-blue-400">{weather.tempMin}°</span>
-            </span>
+            {todayMinMax && (
+              <span className="text-xs text-gray-400">
+                <span className="text-red-400">최고 {todayMinMax.max}°</span>
+                {' / '}
+                <span className="text-blue-400">최저 {todayMinMax.min}°</span>
+              </span>
+            )}
           </div>
         )}
       </div>

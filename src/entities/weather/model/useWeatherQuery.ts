@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   getCurrentWeather,
@@ -7,12 +7,40 @@ import {
   processForecast,
   getCoordsByDistrictName,
 } from '@shared/api'
-import type { Coord } from '@shared/api'
+import type { Coord, HourlyForecast } from '@shared/api'
 import { useGeolocation } from '@shared/lib'
 import type { District } from '@entities/district'
 
 // 위치 소스 타입
 type LocationSource = 'geolocation' | 'search'
+
+/**
+ * 오늘 날짜의 예보에서 최저/최고 기온을 계산합니다.
+ */
+const calculateTodayMinMax = (hourlyForecasts: HourlyForecast[]): { min: number; max: number } | null => {
+  if (!hourlyForecasts || hourlyForecasts.length === 0) return null
+
+  const today = new Date()
+  const todayStr = today.toDateString()
+
+  // 오늘 날짜의 예보 필터링
+  const todayForecasts = hourlyForecasts.filter((item) => {
+    const itemDate = new Date(item.dtTxt)
+    return itemDate.toDateString() === todayStr
+  })
+
+  // 오늘 데이터가 없으면 첫 8개(24시간) 사용
+  const targetForecasts = todayForecasts.length > 0 ? todayForecasts : hourlyForecasts.slice(0, 8)
+
+  if (targetForecasts.length === 0) return null
+
+  const temps = targetForecasts.map((f) => f.temp)
+  
+  return {
+    min: Math.min(...temps),
+    max: Math.max(...temps),
+  }
+}
 
 /**
  * 현재 위치 기반 또는 검색된 위치 기반으로 날씨 데이터를 가져오는 커스텀 훅
@@ -62,6 +90,12 @@ export const useWeatherQuery = () => {
     staleTime: 1000 * 60 * 10, // 10분간 fresh 상태 유지
     gcTime: 1000 * 60 * 30, // 30분간 캐시 유지
   })
+
+  // 오늘의 최저/최고 기온 계산
+  const todayMinMax = useMemo(() => {
+    if (!forecastQuery.data?.hourlyForecasts) return null
+    return calculateTodayMinMax(forecastQuery.data.hourlyForecasts)
+  }, [forecastQuery.data])
 
   /**
    * 행정구역 선택 시 좌표를 검색하고 해당 위치의 날씨를 가져옵니다.
@@ -122,6 +156,9 @@ export const useWeatherQuery = () => {
     forecastLoading: forecastQuery.isLoading,
     forecastError: forecastQuery.error,
     refetchForecast: forecastQuery.refetch,
+
+    // 오늘의 최저/최고 기온
+    todayMinMax,
 
     // 전체 로딩/에러 상태
     isLoading: geoLoading || isSearching || currentWeatherQuery.isLoading || forecastQuery.isLoading,

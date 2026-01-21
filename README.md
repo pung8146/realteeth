@@ -110,7 +110,7 @@ src/
 ```env
 VITE_WEATHER_API_KEY=발급받은API키_값
 ```
-2) 패키지 설치 및 실행
+### 2) 패키지 설치 및 실행
 
 # 의존성 설치
 npm install
