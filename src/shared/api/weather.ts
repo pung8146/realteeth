@@ -105,37 +105,46 @@ export const processForecast = (data: ForecastResponse): ProcessedForecast => {
 }
 
 /**
- * 행정구역 이름으로 좌표를 검색합니다.
- * @param district 행정구역 객체
- * @returns 좌표 (lat, lon)
+ * 행정구역 이름으로 좌표를 검색합니다. (단계별 재시도 로직 포함)
  */
-export const getCoordsByDistrictName = async (
-  district: District
-): Promise<Coord> => {
-  // 검색 쿼리 생성: "시도 시군구 읍면동" 형태
-  const queryParts: string[] = [district.sido]
-  if (district.sigungu) queryParts.push(district.sigungu)
-  if (district.eupmyeondong) queryParts.push(district.eupmyeondong)
-  
-  const query = queryParts.join(' ')
-  const encodedQuery = encodeURIComponent(query)
-  
-  const url = `${GEO_URL}/direct?q=${encodedQuery},KR&limit=1&appid=${API_KEY}`
+export const getCoordsByDistrictName = async (district: District): Promise<Coord> => {
+  const searchQueries: string[] = [];
 
-  const response = await fetch(url)
+  // 1. 우선순위 설정
+  if (district.eupmyeondong && district.sigungu) {
+    // 1순위: 읍면동 + 시군구 (예: "청운동, 종로구, KR")
+    searchQueries.push(`${district.eupmyeondong}, ${district.sigungu}, KR`);
+  }
+  if (district.sigungu) {
+    // 2순위: 시군구 (예: "강남구, KR")
+    searchQueries.push(`${district.sigungu}, KR`);
+  }
+  // 3순위: 시도 (예: "서울특별시, KR")
+  searchQueries.push(`${district.sido}, KR`);
 
-  if (!response.ok) {
-    throw new Error(`좌표를 가져올 수 없습니다. (${response.status})`)
+  // 2. 순차적 API 호출
+  for (const q of searchQueries) {
+    const encodedQuery = encodeURIComponent(q);
+    const url = `${GEO_URL}/direct?q=${encodedQuery}&limit=1&appid=${API_KEY}`;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+
+      const data: GeocodingResponse[] = await response.json();
+
+      if (data && data.length > 0) {
+        return {
+          lat: data[0].lat,
+          lon: data[0].lon,
+        };
+      }
+    } catch (error) {
+      console.error(`검색 실패 (${q}):`, error);
+      continue;
+    }
   }
 
-  const data: GeocodingResponse[] = await response.json()
-
-  if (data.length === 0) {
-    throw new Error(`"${query}"에 대한 좌표를 찾을 수 없습니다.`)
-  }
-
-  return {
-    lat: data[0].lat,
-    lon: data[0].lon,
-  }
-}
+  // 모든 시도가 실패했을 때만 에러 발생
+  throw new Error(`"${district.fullPath}" 지역의 좌표 정보를 찾을 수 없습니다.`);
+};
