@@ -54,13 +54,9 @@ export const SearchBar = ({
 
   // 검색 결과 항목 클릭 핸들러
   const handleSelect = (district: District) => {
-    console.log('선택된 행정구역:', district.fullPath)
     setQuery(formatDistrictName(district))
     setIsOpen(false)
-
-    if (onSelect) {
-      onSelect(district)
-    }
+    onSelect?.(district)
   }
 
   // 입력 필드 포커스 시 결과가 있으면 드롭다운 열기

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useWeatherQuery } from '@entities/weather'
 import { SearchBar } from '@features/search-location'
 import {
@@ -37,16 +37,6 @@ const MainPage = () => {
     removeFavorite,
     updateNickname,
   } = useFavorites()
-
-  // 데이터 성공 시 콘솔에 출력
-  useEffect(() => {
-    if (currentWeather) {
-      console.log('현재 날씨:', currentWeather)
-    }
-    if (forecast) {
-      console.log('5일 예보:', forecast)
-    }
-  }, [currentWeather, forecast])
 
   // 현재 표시할 위치 이름 결정
   const displayLocationName =
